@@ -4,23 +4,44 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { useAppState } from "@/lib/app-state";
 import { formatFullDate } from "@/lib/dates";
 
 export default function CheckInCompleteScreen() {
+  const { todayStatus } = useAppState();
+  const isConcern = todayStatus === "concern";
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 items-center justify-center gap-4 px-8">
-        <View className="h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
-          <Feather name="check" size={40} className="text-emerald-600" />
+        <View
+          className={
+            isConcern
+              ? "h-20 w-20 items-center justify-center rounded-full bg-orange-100"
+              : "h-20 w-20 items-center justify-center rounded-full bg-emerald-100"
+          }
+        >
+          <Feather
+            name="check"
+            size={40}
+            className={isConcern ? "text-orange-600" : "text-emerald-600"}
+          />
         </View>
         <Text variant="h1" className="text-center text-3xl">
           You&apos;re all set for today
         </Text>
         <Text variant="muted">{formatFullDate(new Date())}</Text>
-        <Text variant="lead" className="text-center">
-          Thanks for checking in. Your family will see that you&apos;re doing
-          okay.
-        </Text>
+        {isConcern ? (
+          <Text variant="lead" className="text-center">
+            Thanks for checking in. Your family will see that you may need some
+            extra support today.
+          </Text>
+        ) : (
+          <Text variant="lead" className="text-center">
+            Thanks for checking in. Your family will see that you&apos;re doing
+            okay.
+          </Text>
+        )}
       </View>
 
       <View className="gap-3 px-6 pb-6">

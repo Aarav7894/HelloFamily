@@ -28,7 +28,7 @@ npx expo start
 | Variable | Description |
 |----------|-------------|
 | `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon/public key |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Your Supabase publishable key |
 
 Fill in your values in `.env.local`.
 

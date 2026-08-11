@@ -1,7 +1,9 @@
 import { router } from "expo-router";
-import { Image, View } from "react-native";
+import { Image, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@/components/icon";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useAppState } from "@/lib/app-state";
 
@@ -15,65 +17,107 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 justify-between px-6 py-8">
-        <View className="flex-1 items-center justify-center gap-5">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-6 px-6 pb-10 pt-6"
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="items-center gap-3">
           <Image
             source={require("@/assets/images/icon.png")}
             className="h-20 w-20 rounded-2xl"
             resizeMode="cover"
             accessibilityLabel="HelloFamily logo"
           />
-          <Text variant="h1" className="text-4xl">
-            Stay connected.{"\n"}Know they&apos;re okay.
-          </Text>
+          <Text className="text-2xl font-bold">HelloFamily</Text>
+          <Text variant="h1">Stay connected.{"\n"}Know they&apos;re okay.</Text>
           <Text variant="lead" className="text-center">
-            HelloFamily helps families stay connected with their loved ones
-            through one simple daily check-in.
+            Daily check-ins give families peace of mind, one simple tap at a
+            time.
           </Text>
         </View>
 
-        <View className="gap-3">
-          <Button
-            size="lg"
-            className="h-14"
-            onPress={() => router.push("/sign-up")}
-          >
-            <Text className="text-lg font-semibold">Create Account</Text>
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="h-14"
-            onPress={() => router.push("/login")}
-          >
-            <Text className="text-lg font-semibold">Log In</Text>
-          </Button>
-
-          {__DEV__ && (
-            <View className="mt-6 gap-3 border-border border-t pt-6">
-              <Text variant="muted" className="text-center">
-                Developer Preview — test both roles without an account
-              </Text>
-              <View className="flex-row gap-3">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onPress={() => previewAs("adult-child")}
-                >
-                  <Text>Adult Child View</Text>
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onPress={() => previewAs("older-adult")}
-                >
-                  <Text>Older Adult View</Text>
-                </Button>
-              </View>
+        <Card>
+          <CardContent className="gap-3 pt-6">
+            <Button
+              size="lg"
+              className="h-14"
+              onPress={() => router.push("/login")}
+            >
+              <Text className="text-lg font-semibold">Log In</Text>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-14"
+              onPress={() => router.push("/sign-up")}
+            >
+              <Text className="text-lg font-semibold">Create Account</Text>
+            </Button>
+            <View className="flex-row items-center justify-center gap-2 pt-1">
+              <Feather
+                name="users"
+                size={16}
+                className="text-muted-foreground"
+              />
+              <Text variant="muted">For adult children and older adults</Text>
             </View>
-          )}
-        </View>
-      </View>
+          </CardContent>
+        </Card>
+
+        <Text variant="muted" className="text-center">
+          We make it easy to check in every day and share a simple
+          &quot;I&apos;m okay&quot; status. Invite by link and stay connected
+          with the people who matter most.
+        </Text>
+
+        <Card>
+          <CardContent className="flex-row items-start gap-4 pt-6">
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-accent">
+              <Feather
+                name="lock"
+                size={22}
+                className="text-accent-foreground"
+              />
+            </View>
+            <View className="flex-1 gap-1">
+              <Text className="text-lg font-semibold">Private and simple</Text>
+              <Text variant="muted">
+                Invite a loved one by link. See today&apos;s status without
+                viewing their personal responses.
+              </Text>
+            </View>
+          </CardContent>
+        </Card>
+
+        {__DEV__ && (
+          <View className="gap-3 border-border border-t pt-6">
+            <Text variant="muted" className="text-center">
+              Developer Preview — test both roles without an account
+            </Text>
+            <View className="flex-row gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onPress={() => previewAs("adult-child")}
+              >
+                <Text>Adult Child View</Text>
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onPress={() => previewAs("older-adult")}
+              >
+                <Text>Older Adult View</Text>
+              </Button>
+            </View>
+          </View>
+        )}
+
+        <Text variant="muted" className="text-center text-sm">
+          Email and password required
+        </Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
