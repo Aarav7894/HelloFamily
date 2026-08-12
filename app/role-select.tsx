@@ -1,7 +1,7 @@
-import { router } from "expo-router";
-import { Pressable, View } from "react-native";
+import { Redirect, router } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BackButton } from "@/components/back-button";
 import {
   Card,
   CardContent,
@@ -9,21 +9,53 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { useAppState } from "@/lib/app-state";
+import { useAuth } from "@/lib/auth-context";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { supabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+
+type RoleChoice = "adult_child" | "older_adult";
 
 export default function RoleSelectScreen() {
-  const { setRole } = useAppState();
+  const { session, loading, refreshProfile } = useAuth();
+  const [submittingRole, setSubmittingRole] = useState<RoleChoice | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  function choose(role: "adult-child" | "older-adult") {
-    setRole(role);
-    router.replace(role === "adult-child" ? "/dashboard" : "/check-in");
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator />
+      </SafeAreaView>
+    );
+  }
+
+  if (!session) {
+    return <Redirect href="/" />;
+  }
+
+  const userId = session.user.id;
+
+  async function choose(role: RoleChoice) {
+    setError(null);
+    setSubmittingRole(role);
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ role })
+      .eq("id", userId);
+
+    if (updateError) {
+      setError(getAuthErrorMessage(updateError));
+      setSubmittingRole(null);
+      return;
+    }
+
+    await refreshProfile();
+    router.replace(role === "adult_child" ? "/dashboard" : "/check-in");
   }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-row items-center px-2 pt-2">
-        <BackButton />
-      </View>
       <View className="flex-1 justify-center gap-4 px-6">
         <View className="mb-2 gap-1">
           <Text variant="h1" className="text-left text-3xl">
@@ -35,8 +67,10 @@ export default function RoleSelectScreen() {
         </View>
 
         <Pressable
-          onPress={() => choose("adult-child")}
+          onPress={() => choose("adult_child")}
+          disabled={submittingRole !== null}
           accessibilityRole="button"
+          className={cn(submittingRole !== null && "opacity-50")}
         >
           <Card className="border-2">
             <CardContent className="gap-1 pt-6">
@@ -49,8 +83,10 @@ export default function RoleSelectScreen() {
         </Pressable>
 
         <Pressable
-          onPress={() => choose("older-adult")}
+          onPress={() => choose("older_adult")}
+          disabled={submittingRole !== null}
           accessibilityRole="button"
+          className={cn(submittingRole !== null && "opacity-50")}
         >
           <Card className="border-2">
             <CardContent className="gap-1 pt-6">
@@ -61,6 +97,15 @@ export default function RoleSelectScreen() {
             </CardContent>
           </Card>
         </Pressable>
+
+        {submittingRole ? (
+          <Text variant="muted" className="text-center">
+            Saving...
+          </Text>
+        ) : null}
+        {error ? (
+          <Text className="text-center text-destructive">{error}</Text>
+        ) : null}
       </View>
     </SafeAreaView>
   );

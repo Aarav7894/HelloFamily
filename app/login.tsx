@@ -7,20 +7,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { supabase } from "@/lib/supabase";
+
+// Loosened for pre-launch testing with placeholder addresses — tighten before shipping.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit() {
-    if (!email.trim() || !password) {
-      setError("Enter your email and password to continue.");
+  async function handleSubmit() {
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setError("Enter a valid email address.");
       return;
     }
+    if (!password) {
+      setError("Enter your password.");
+      return;
+    }
+
     setError(null);
-    // Sample data only — real authentication is not implemented yet.
-    router.push("/role-select");
+    setSubmitting(true);
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    setSubmitting(false);
+
+    if (signInError) {
+      setError(getAuthErrorMessage(signInError));
+      return;
+    }
+
+    router.replace("/");
   }
 
   return (
@@ -50,6 +74,7 @@ export default function LoginScreen() {
               autoComplete="email"
               keyboardType="email-address"
               className="h-14 text-lg"
+              editable={!submitting}
             />
           </View>
           <View className="gap-2">
@@ -61,16 +86,28 @@ export default function LoginScreen() {
               placeholder="Enter your password"
               secureTextEntry
               className="h-14 text-lg"
+              editable={!submitting}
             />
           </View>
           {error ? <Text className="text-destructive">{error}</Text> : null}
         </View>
 
-        <Button size="lg" className="h-14" onPress={handleSubmit}>
-          <Text className="text-lg font-semibold">Log In</Text>
+        <Button
+          size="lg"
+          className="h-14"
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          <Text className="text-lg font-semibold">
+            {submitting ? "Logging In..." : "Log In"}
+          </Text>
         </Button>
 
-        <Button variant="ghost" onPress={() => router.replace("/sign-up")}>
+        <Button
+          variant="ghost"
+          onPress={() => router.replace("/sign-up")}
+          disabled={submitting}
+        >
           <Text>Don&apos;t have an account? Create one</Text>
         </Button>
       </View>

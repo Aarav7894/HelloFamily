@@ -1,22 +1,44 @@
-import { router } from "expo-router";
-import { ScrollView, View } from "react-native";
+import { Redirect, router } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { useAppState } from "@/lib/app-state";
+import { useAuth } from "@/lib/auth-context";
 import { formatFullDate } from "@/lib/dates";
-import { dayStatus } from "@/lib/sample-data";
-import { cn } from "@/lib/utils";
+import { type FamilyMember, fetchFamilyMembers } from "@/lib/family-api";
 
 export default function DashboardScreen() {
-  const { olderAdultName, history, todayStatus, reset } = useAppState();
+  const { session, loading, signOut } = useAuth();
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
-  const lastCompletedEntry = [...history]
-    .reverse()
-    .find((entry) => entry.responses);
-  const pastDays = history.slice(0, -1).reverse();
+  useEffect(() => {
+    if (!session) return;
+    fetchFamilyMembers()
+      .then(setMembers)
+      .finally(() => setLoadingMembers(false));
+  }, [session]);
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator />
+      </SafeAreaView>
+    );
+  }
+
+  if (!session) {
+    return <Redirect href="/" />;
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut();
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -28,63 +50,62 @@ export default function DashboardScreen() {
         <View className="gap-1">
           <Text variant="muted">{formatFullDate(new Date())}</Text>
           <Text variant="h1" className="text-left text-3xl">
-            {olderAdultName}&apos;s Day
+            Your Family
           </Text>
         </View>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Today&apos;s Check-In</CardTitle>
-          </CardHeader>
-          <CardContent className="gap-4">
-            <StatusBadge status={todayStatus} />
-            <Text variant="muted" className="text-base">
-              Last completed:{" "}
-              {lastCompletedEntry
-                ? lastCompletedEntry.label
-                : "No check-ins yet"}
-            </Text>
-          </CardContent>
-        </Card>
+        <Button
+          size="lg"
+          className="h-14"
+          onPress={() => router.push("/invite-family")}
+        >
+          <Text className="text-lg font-semibold">Invite Family Member</Text>
+        </Button>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="gap-3">
-            {pastDays.map((entry, index) => (
-              <View
-                key={entry.date}
-                className={cn(
-                  "flex-row items-center justify-between pt-3",
-                  index > 0 && "border-border border-t",
-                )}
-              >
-                <Text className="text-base">{entry.label}</Text>
-                <StatusBadge status={dayStatus(entry)} size="compact" />
-              </View>
-            ))}
-            <Text variant="muted" className="text-sm">
-              Individual answers stay private — only daily status is shown here.
-            </Text>
-          </CardContent>
-        </Card>
+        {loadingMembers ? (
+          <ActivityIndicator />
+        ) : members.length === 0 ? (
+          <Card>
+            <CardContent className="gap-2 pt-6">
+              <Text className="text-lg font-semibold">
+                No family members yet
+              </Text>
+              <Text variant="muted">
+                Invite a loved one above to see their daily check-in status
+                here.
+              </Text>
+            </CardContent>
+          </Card>
+        ) : (
+          members.map((member) => (
+            <Card key={member.id}>
+              <CardHeader>
+                <CardTitle className="text-xl">
+                  {member.fullName ?? "Family Member"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="gap-4">
+                <StatusBadge status={member.status} />
+                <Text variant="muted" className="text-base">
+                  Last completed:{" "}
+                  {member.lastCompletedDate ?? "No check-ins yet"}
+                </Text>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </ScrollView>
 
-      {__DEV__ && (
-        <View className="px-6 pb-6">
-          <Button
-            variant="outline"
-            className="h-12"
-            onPress={() => {
-              reset();
-              router.replace("/");
-            }}
-          >
-            <Text>Switch Role (Dev)</Text>
-          </Button>
-        </View>
-      )}
+      <View className="px-6 pb-6">
+        <Button
+          variant="outline"
+          className="h-12"
+          onPress={handleSignOut}
+          disabled={signingOut}
+        >
+          <Text>{signingOut ? "Logging Out..." : "Log Out"}</Text>
+        </Button>
+      </View>
     </SafeAreaView>
   );
 }

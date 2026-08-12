@@ -1,18 +1,27 @@
-import { router } from "expo-router";
-import { Image, ScrollView, View } from "react-native";
+import { Redirect, router } from "expo-router";
+import { ActivityIndicator, Image, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { useAppState } from "@/lib/app-state";
+import { useAuth } from "@/lib/auth-context";
 
 export default function WelcomeScreen() {
-  const { setRole } = useAppState();
+  const { session, profile, loading } = useAuth();
 
-  function previewAs(role: "adult-child" | "older-adult") {
-    setRole(role);
-    router.replace(role === "adult-child" ? "/dashboard" : "/check-in");
+  if (!loading && session && profile) {
+    if (profile.role === "adult_child") return <Redirect href="/dashboard" />;
+    if (profile.role === "older_adult") return <Redirect href="/check-in" />;
+    return <Redirect href="/role-select" />;
+  }
+
+  if (loading || (session && !profile)) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -89,30 +98,6 @@ export default function WelcomeScreen() {
             </View>
           </CardContent>
         </Card>
-
-        {__DEV__ && (
-          <View className="gap-3 border-border border-t pt-6">
-            <Text variant="muted" className="text-center">
-              Developer Preview — test both roles without an account
-            </Text>
-            <View className="flex-row gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onPress={() => previewAs("adult-child")}
-              >
-                <Text>Adult Child View</Text>
-              </Button>
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onPress={() => previewAs("older-adult")}
-              >
-                <Text>Older Adult View</Text>
-              </Button>
-            </View>
-          </View>
-        )}
 
         <Text variant="muted" className="text-center text-sm">
           Email and password required

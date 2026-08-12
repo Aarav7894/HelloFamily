@@ -17,34 +17,22 @@ import {
   sampleOlderAdult,
 } from "@/lib/sample-data";
 
-export type UserRole = "adult-child" | "older-adult";
-
 type AppState = {
-  role: UserRole | null;
-  setRole: (role: UserRole) => void;
   olderAdultName: string;
   history: CheckInHistoryEntry[];
   todayStatus: CheckInStatus;
   completeCheckIn: (responses: CheckInResponses) => void;
-  reset: () => void;
 };
 
 const AppStateContext = createContext<AppState | null>(null);
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRoleState] = useState<UserRole | null>(null);
   const [todayResponses, setTodayResponses] = useState<CheckInResponses | null>(
     null,
   );
 
-  const setRole = useCallback((next: UserRole) => setRoleState(next), []);
-
   const completeCheckIn = useCallback((responses: CheckInResponses) => {
     setTodayResponses(responses);
-  }, []);
-
-  const reset = useCallback(() => {
-    setRoleState(null);
   }, []);
 
   const history = useMemo<CheckInHistoryEntry[]>(() => {
@@ -63,15 +51,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AppState>(
     () => ({
-      role,
-      setRole,
       olderAdultName: sampleOlderAdult.name,
       history,
       todayStatus,
       completeCheckIn,
-      reset,
     }),
-    [role, setRole, history, todayStatus, completeCheckIn, reset],
+    [history, todayStatus, completeCheckIn],
   );
 
   return (

@@ -1,13 +1,13 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { redeemInvite } from "@/lib/family-api";
 import { supabase } from "@/lib/supabase";
 
 // Loosened for pre-launch testing with placeholder addresses — tighten before shipping.
@@ -23,7 +23,8 @@ function validate(fullName: string, email: string, password: string) {
   return null;
 }
 
-export default function SignUpScreen() {
+export default function AcceptInviteScreen() {
+  const { token } = useLocalSearchParams<{ token: string }>();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,24 +48,32 @@ export default function SignUpScreen() {
       options: {
         data: {
           full_name: fullName.trim(),
-          role: "adult_child",
+          role: "older_adult",
           timezone,
         },
       },
     });
 
-    setSubmitting(false);
-
     if (signUpError) {
+      setSubmitting(false);
       setError(getAuthErrorMessage(signUpError));
       return;
     }
 
-    if (data.session) {
+    if (data.session && token) {
+      const result = await redeemInvite(token);
+      setSubmitting(false);
+      if (!result) {
+        setError(
+          "Your account was created, but this invite link is invalid or has expired.",
+        );
+        return;
+      }
       router.replace("/");
       return;
     }
 
+    setSubmitting(false);
     router.replace({
       pathname: "/confirm-email",
       params: { email: email.trim() },
@@ -73,30 +82,21 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-row items-center px-2 pt-2">
-        <BackButton />
-      </View>
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="gap-6 px-6 pb-10 pt-4"
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View className="flex-1 gap-6 px-6 pt-10">
         <View className="gap-1">
           <Text variant="h1" className="text-left text-3xl">
-            Create your account
+            You&apos;ve been invited
           </Text>
           <Text variant="lead" className="text-left">
-            For adult children keeping up with a loved one. Your family member
-            creates their own account from your invite link.
+            Create your account to connect with your family.
           </Text>
         </View>
 
         <View className="gap-4">
           <View className="gap-2">
-            <Label nativeID="signup-name">Full Name</Label>
+            <Label nativeID="accept-name">Full Name</Label>
             <Input
-              aria-labelledby="signup-name"
+              aria-labelledby="accept-name"
               value={fullName}
               onChangeText={setFullName}
               placeholder="Your name"
@@ -106,11 +106,10 @@ export default function SignUpScreen() {
               editable={!submitting}
             />
           </View>
-
           <View className="gap-2">
-            <Label nativeID="signup-email">Email</Label>
+            <Label nativeID="accept-email">Email</Label>
             <Input
-              aria-labelledby="signup-email"
+              aria-labelledby="accept-email"
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
@@ -122,9 +121,9 @@ export default function SignUpScreen() {
             />
           </View>
           <View className="gap-2">
-            <Label nativeID="signup-password">Password</Label>
+            <Label nativeID="accept-password">Password</Label>
             <Input
-              aria-labelledby="signup-password"
+              aria-labelledby="accept-password"
               value={password}
               onChangeText={setPassword}
               placeholder="Create a password"
@@ -146,15 +145,7 @@ export default function SignUpScreen() {
             {submitting ? "Creating Account..." : "Create Account"}
           </Text>
         </Button>
-
-        <Button
-          variant="ghost"
-          onPress={() => router.replace("/login")}
-          disabled={submitting}
-        >
-          <Text>Already have an account? Log in</Text>
-        </Button>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
