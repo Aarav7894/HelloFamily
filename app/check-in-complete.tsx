@@ -1,19 +1,26 @@
 import { Redirect, router } from "expo-router";
-import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth-context";
 import { formatFullDate } from "@/lib/dates";
+import { fetchTodayCheckInStatus } from "@/lib/family-api";
 
 export default function CheckInCompleteScreen() {
-  const { todayStatus } = useAppState();
   const { session, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
-  const isConcern = todayStatus === "concern";
+  const [isConcern, setIsConcern] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchTodayCheckInStatus()
+      .then((status) => setIsConcern(status === "concern"))
+      .finally(() => setLoadingStatus(false));
+  }, [session]);
 
   if (!session) {
     return <Redirect href="/" />;
@@ -22,6 +29,14 @@ export default function CheckInCompleteScreen() {
   async function handleSignOut() {
     setSigningOut(true);
     await signOut();
+  }
+
+  if (loadingStatus) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator />
+      </SafeAreaView>
+    );
   }
 
   return (

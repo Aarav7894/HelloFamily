@@ -11,7 +11,7 @@ export default function WelcomeScreen() {
   const { session, profile, loading } = useAuth();
 
   if (!loading && session && profile) {
-    if (profile.role === "adult_child") return <Redirect href="/dashboard" />;
+    if (profile.role === "adult_child") return <Redirect href="/family" />;
     if (profile.role === "older_adult") return <Redirect href="/check-in" />;
     return <Redirect href="/role-select" />;
   }

@@ -5,7 +5,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChoiceButton } from "@/components/choice-button";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth-context";
 import { formatFullDate } from "@/lib/dates";
 import { hasCheckedInToday, submitCheckIn } from "@/lib/family-api";
@@ -17,7 +16,6 @@ import {
 
 export default function CheckInScreen() {
   const { session, loading, signOut } = useAuth();
-  const { completeCheckIn } = useAppState();
   const [answers, setAnswers] = useState<Partial<Record<QuestionId, string>>>(
     {},
   );
@@ -59,7 +57,6 @@ export default function CheckInScreen() {
     setSubmitting(true);
     try {
       await submitCheckIn(answers as CheckInResponses);
-      completeCheckIn(answers as CheckInResponses);
       router.replace("/check-in-complete");
     } catch (err) {
       setSubmitError(

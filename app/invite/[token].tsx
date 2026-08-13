@@ -13,10 +13,19 @@ import { supabase } from "@/lib/supabase";
 // Loosened for pre-launch testing with placeholder addresses — tighten before shipping.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
+const MIN_PHONE_DIGITS = 7;
 
-function validate(fullName: string, email: string, password: string) {
+function validate(
+  fullName: string,
+  email: string,
+  phoneNumber: string,
+  password: string,
+) {
   if (!fullName.trim()) return "Enter your full name.";
   if (!EMAIL_PATTERN.test(email.trim())) return "Enter a valid email address.";
+  if (phoneNumber.replace(/\D/g, "").length < MIN_PHONE_DIGITS) {
+    return "Enter a valid phone number.";
+  }
   if (password.length < MIN_PASSWORD_LENGTH) {
     return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
   }
@@ -27,12 +36,13 @@ export default function AcceptInviteScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit() {
-    const validationError = validate(fullName, email, password);
+    const validationError = validate(fullName, email, phoneNumber, password);
     if (validationError) {
       setError(validationError);
       return;
@@ -50,6 +60,7 @@ export default function AcceptInviteScreen() {
           full_name: fullName.trim(),
           role: "older_adult",
           timezone,
+          phone_number: phoneNumber.trim(),
         },
       },
     });
@@ -116,6 +127,19 @@ export default function AcceptInviteScreen() {
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
+              className="h-14 text-lg"
+              editable={!submitting}
+            />
+          </View>
+          <View className="gap-2">
+            <Label nativeID="accept-phone">Phone Number</Label>
+            <Input
+              aria-labelledby="accept-phone"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              placeholder="(555) 555-1234"
+              autoComplete="tel"
+              keyboardType="phone-pad"
               className="h-14 text-lg"
               editable={!submitting}
             />

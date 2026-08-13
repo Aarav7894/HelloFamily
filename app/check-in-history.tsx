@@ -1,10 +1,15 @@
-import { ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BackButton } from "@/components/back-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { useAppState } from "@/lib/app-state";
-import { type CheckInHistoryEntry, dailyQuestions } from "@/lib/sample-data";
+import { formatStatusDateLabel } from "@/lib/dates";
+import {
+  fetchOwnCheckInHistory,
+  type OwnCheckInHistoryEntry,
+} from "@/lib/family-api";
+import { dailyQuestions } from "@/lib/sample-data";
 
 function answerLabel(
   questionId: (typeof dailyQuestions)[number]["id"],
@@ -16,38 +21,39 @@ function answerLabel(
   );
 }
 
-function HistoryRow({ entry }: { entry: CheckInHistoryEntry }) {
+function HistoryRow({ entry }: { entry: OwnCheckInHistoryEntry }) {
   return (
     <Card>
       <CardContent className="gap-2 pt-6">
-        <Text className="text-lg font-semibold">{entry.label}</Text>
-        {entry.responses ? (
-          <View className="flex-row flex-wrap gap-2">
-            {dailyQuestions.map((question) => (
-              <View
-                key={question.id}
-                className="rounded-full border border-border bg-muted px-3 py-1"
-              >
-                <Text className="text-muted-foreground text-sm">
-                  {answerLabel(
-                    question.id,
-                    entry.responses?.[question.id] ?? "",
-                  )}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text variant="muted">No check-in that day</Text>
-        )}
+        <Text className="text-lg font-semibold">
+          {formatStatusDateLabel(entry.date)}
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {dailyQuestions.map((question) => (
+            <View
+              key={question.id}
+              className="rounded-full border border-border bg-muted px-3 py-1"
+            >
+              <Text className="text-muted-foreground text-sm">
+                {answerLabel(question.id, entry.responses[question.id])}
+              </Text>
+            </View>
+          ))}
+        </View>
       </CardContent>
     </Card>
   );
 }
 
 export default function CheckInHistoryScreen() {
-  const { history } = useAppState();
-  const orderedHistory = [...history].reverse();
+  const [history, setHistory] = useState<OwnCheckInHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOwnCheckInHistory()
+      .then(setHistory)
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -68,9 +74,13 @@ export default function CheckInHistoryScreen() {
           </Text>
         </View>
 
-        {orderedHistory.map((entry) => (
-          <HistoryRow key={entry.date} entry={entry} />
-        ))}
+        {loading ? (
+          <ActivityIndicator />
+        ) : history.length === 0 ? (
+          <Text variant="muted">No check-ins yet.</Text>
+        ) : (
+          history.map((entry) => <HistoryRow key={entry.date} entry={entry} />)
+        )}
       </ScrollView>
     </SafeAreaView>
   );

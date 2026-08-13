@@ -51,7 +51,7 @@ export default function RoleSelectScreen() {
     }
 
     await refreshProfile();
-    router.replace(role === "adult_child" ? "/dashboard" : "/check-in");
+    router.replace(role === "adult_child" ? "/family" : "/check-in");
   }
 
   return (

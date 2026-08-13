@@ -2,7 +2,12 @@
 // connection and check-in flows. Kept separate from screens so the data
 // access shape stays easy to audit against the schema/RLS contract.
 
-import type { CheckInResponses } from "@/lib/sample-data";
+import { isoDate } from "@/lib/dates";
+import type {
+  CheckInResponses,
+  MoodAnswer,
+  YesNoAnswer,
+} from "@/lib/sample-data";
 import { supabase } from "@/lib/supabase";
 
 export type FamilyStatus = "completed" | "concern" | "missed" | "pending";
@@ -10,8 +15,15 @@ export type FamilyStatus = "completed" | "concern" | "missed" | "pending";
 export type FamilyMember = {
   id: string;
   fullName: string | null;
+  phoneNumber: string | null;
   status: FamilyStatus;
-  lastCompletedDate: string | null;
+  lastCompletedAt: string | null;
+};
+
+export type StatusHistoryEntry = {
+  statusDate: string;
+  status: FamilyStatus;
+  completedAt: string | null;
 };
 
 export type PendingInvite = {
@@ -20,9 +32,10 @@ export type PendingInvite = {
   expiresAt: string;
 };
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+export type OwnCheckInHistoryEntry = {
+  date: string;
+  responses: CheckInResponses;
+};
 
 async function currentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getUser();
@@ -49,15 +62,18 @@ export async function fetchFamilyMembers(): Promise<FamilyMember[]> {
     { data: todayStatuses },
     { data: recentStatuses },
   ] = await Promise.all([
-    supabase.from("profiles").select("id, full_name").in("id", olderAdultIds),
+    supabase
+      .from("profiles")
+      .select("id, full_name, phone_number")
+      .in("id", olderAdultIds),
     supabase
       .from("daily_statuses")
       .select("older_adult_id, status")
       .in("older_adult_id", olderAdultIds)
-      .eq("status_date", todayIso()),
+      .eq("status_date", isoDate(new Date())),
     supabase
       .from("daily_statuses")
-      .select("older_adult_id, status_date")
+      .select("older_adult_id, status_date, completed_at")
       .in("older_adult_id", olderAdultIds)
       .in("status", ["completed", "concern"])
       .order("status_date", { ascending: false }),
@@ -66,26 +82,61 @@ export async function fetchFamilyMembers(): Promise<FamilyMember[]> {
   const nameById = new Map<string, string | null>(
     (profiles ?? []).map((p) => [p.id as string, p.full_name as string | null]),
   );
+  const phoneById = new Map<string, string | null>(
+    (profiles ?? []).map((p) => [
+      p.id as string,
+      p.phone_number as string | null,
+    ]),
+  );
   const todayStatusById = new Map<string, FamilyStatus>(
     (todayStatuses ?? []).map((s) => [
       s.older_adult_id as string,
       s.status as FamilyStatus,
     ]),
   );
-  const lastCompletedById = new Map<string, string>();
+  const lastCompletedAtById = new Map<string, string>();
   for (const row of recentStatuses ?? []) {
     const id = row.older_adult_id as string;
-    if (!lastCompletedById.has(id)) {
-      lastCompletedById.set(id, row.status_date as string);
+    if (!lastCompletedAtById.has(id) && row.completed_at) {
+      lastCompletedAtById.set(id, row.completed_at as string);
     }
   }
 
   return olderAdultIds.map((id) => ({
     id,
     fullName: nameById.get(id) ?? null,
+    phoneNumber: phoneById.get(id) ?? null,
     status: todayStatusById.get(id) ?? "pending",
-    lastCompletedDate: lastCompletedById.get(id) ?? null,
+    lastCompletedAt: lastCompletedAtById.get(id) ?? null,
   }));
+}
+
+export async function fetchFamilyMemberDetail(memberId: string): Promise<{
+  fullName: string | null;
+  history: StatusHistoryEntry[];
+}> {
+  const [{ data: profile }, { data: statuses }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", memberId)
+      .maybeSingle(),
+    supabase
+      .from("daily_statuses")
+      .select("status_date, status, completed_at")
+      .eq("older_adult_id", memberId)
+      .order("status_date", { ascending: false })
+      .limit(30),
+  ]);
+
+  return {
+    fullName: (profile?.full_name as string | null) ?? null,
+    history: (statuses ?? []).map((row) => ({
+      statusDate: row.status_date as string,
+      status: row.status as FamilyStatus,
+      completedAt: row.completed_at as string | null,
+    })),
+  };
 }
 
 export async function fetchPendingInvites(): Promise<PendingInvite[]> {
@@ -151,7 +202,7 @@ export async function hasCheckedInToday(): Promise<boolean> {
     .from("check_ins")
     .select("id")
     .eq("older_adult_id", userId)
-    .eq("check_in_date", todayIso())
+    .eq("check_in_date", isoDate(new Date()))
     .maybeSingle();
 
   return !error && !!data;
@@ -165,11 +216,50 @@ export async function submitCheckIn(
 
   const { error } = await supabase.from("check_ins").insert({
     older_adult_id: userId,
-    check_in_date: todayIso(),
+    check_in_date: isoDate(new Date()),
     feeling: responses.mood,
     physically_okay: responses.physicallyOkay,
     normal_activities: responses.completedActivities,
   });
 
   if (error) throw new Error(error.message);
+}
+
+export async function fetchOwnCheckInHistory(): Promise<
+  OwnCheckInHistoryEntry[]
+> {
+  const userId = await currentUserId();
+  if (!userId) return [];
+
+  const { data, error } = await supabase
+    .from("check_ins")
+    .select("check_in_date, feeling, physically_okay, normal_activities")
+    .eq("older_adult_id", userId)
+    .order("check_in_date", { ascending: false })
+    .limit(30);
+
+  if (error || !data) return [];
+  return data.map((row) => ({
+    date: row.check_in_date as string,
+    responses: {
+      mood: row.feeling as MoodAnswer,
+      physicallyOkay: row.physically_okay as YesNoAnswer,
+      completedActivities: row.normal_activities as YesNoAnswer,
+    },
+  }));
+}
+
+export async function fetchTodayCheckInStatus(): Promise<FamilyStatus | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("daily_statuses")
+    .select("status")
+    .eq("older_adult_id", userId)
+    .eq("status_date", isoDate(new Date()))
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.status as FamilyStatus;
 }
