@@ -1,18 +1,44 @@
-import { router } from "expo-router";
-import { View } from "react-native";
+import { Redirect, router } from "expo-router";
+import { useState } from "react";
+import { Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useAppState } from "@/lib/app-state";
+import { useAuth } from "@/lib/auth-context";
 import { formatFullDate } from "@/lib/dates";
 
 export default function CheckInCompleteScreen() {
   const { todayStatus } = useAppState();
+  const { session, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
   const isConcern = todayStatus === "concern";
+
+  if (!session) {
+    return <Redirect href="/" />;
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut();
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <View className="flex-row items-center justify-end px-4 pt-2">
+        <Pressable
+          onPress={handleSignOut}
+          disabled={signingOut}
+          accessibilityRole="button"
+          hitSlop={12}
+          className="rounded-full px-3 py-2 active:bg-accent"
+        >
+          <Text variant="muted" className="text-base">
+            {signingOut ? "Logging Out..." : "Log Out"}
+          </Text>
+        </Pressable>
+      </View>
       <View className="flex-1 items-center justify-center gap-4 px-8">
         <View
           className={

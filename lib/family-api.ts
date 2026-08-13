@@ -103,9 +103,19 @@ export async function fetchPendingInvites(): Promise<PendingInvite[]> {
   }));
 }
 
+export async function deleteInvite(id: string): Promise<void> {
+  const { error } = await supabase.from("invites").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteInvites(ids: string[]): Promise<void> {
+  const { error } = await supabase.from("invites").delete().in("id", ids);
+  if (error) throw new Error(error.message);
+}
+
 export async function createInvite(
-  contact: string,
-): Promise<{ token: string; expiresAt: string }> {
+  contact?: string,
+): Promise<{ id: string; token: string; expiresAt: string }> {
   const { data, error } = await supabase.rpc("create_invite", {
     p_contact: contact,
   });
@@ -114,7 +124,11 @@ export async function createInvite(
   if (error || !row) {
     throw new Error(error?.message ?? "Could not create invite.");
   }
-  return { token: row.token as string, expiresAt: row.expires_at as string };
+  return {
+    id: row.invite_id as string,
+    token: row.token as string,
+    expiresAt: row.expires_at as string,
+  };
 }
 
 export async function redeemInvite(
