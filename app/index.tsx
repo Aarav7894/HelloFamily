@@ -1,5 +1,5 @@
 import { Redirect, router } from "expo-router";
-import { ActivityIndicator, Image, ScrollView, View } from "react-native";
+import { ActivityIndicator, Image, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@/components/icon";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,7 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="gap-6 px-6 pb-10 pt-6"
-        showsVerticalScrollIndicator={false}
-      >
+      <View className="flex-1 justify-center gap-6 px-6">
         <View className="items-center gap-3">
           <Image
             source={require("@/assets/images/icon.png")}
@@ -74,14 +70,8 @@ export default function WelcomeScreen() {
           </CardContent>
         </Card>
 
-        <Text variant="muted" className="text-center">
-          We make it easy to check in every day and share a simple
-          &quot;I&apos;m okay&quot; status. Invite by link and stay connected
-          with the people who matter most.
-        </Text>
-
         <Card>
-          <CardContent className="flex-row items-start gap-4 pt-6">
+          <CardContent className="flex-col items-center gap-2 pt-6">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-accent">
               <Feather
                 name="lock"
@@ -89,20 +79,14 @@ export default function WelcomeScreen() {
                 className="text-accent-foreground"
               />
             </View>
-            <View className="flex-1 gap-1">
-              <Text className="text-lg font-semibold">Private and simple</Text>
-              <Text variant="muted">
-                Invite a loved one by link. See today&apos;s status without
-                viewing their personal responses.
-              </Text>
-            </View>
+            <Text className="text-lg font-semibold">Private and simple</Text>
           </CardContent>
         </Card>
 
         <Text variant="muted" className="text-center text-sm">
           Email and password required
         </Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
