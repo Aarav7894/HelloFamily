@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BackButton } from "@/components/back-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
+import { useAuth } from "@/lib/auth-context";
 import { formatStatusDateLabel } from "@/lib/dates";
 import {
   fetchOwnCheckInHistory,
@@ -46,6 +46,8 @@ function HistoryRow({ entry }: { entry: OwnCheckInHistoryEntry }) {
 }
 
 export default function CheckInHistoryScreen() {
+  const { signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
   const [history, setHistory] = useState<OwnCheckInHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,14 +57,29 @@ export default function CheckInHistoryScreen() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut();
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-row items-center px-2 pt-2">
-        <BackButton />
+      <View className="flex-row items-center justify-end px-4 pt-2">
+        <Pressable
+          onPress={handleSignOut}
+          disabled={signingOut}
+          accessibilityRole="button"
+          hitSlop={12}
+          className="rounded-full px-3 py-2 active:bg-accent"
+        >
+          <Text variant="muted" className="text-base">
+            {signingOut ? "Logging Out..." : "Log Out"}
+          </Text>
+        </Pressable>
       </View>
       <ScrollView
         className="flex-1 px-6"
-        contentContainerClassName="gap-4 pb-6 pt-2"
+        contentContainerClassName="gap-4 pb-6"
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-1">
