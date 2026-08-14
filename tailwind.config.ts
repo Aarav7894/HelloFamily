@@ -44,6 +44,13 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        display: ["DMSerifDisplay_400Regular"],
+        body: ["Inter_400Regular"],
+        "body-medium": ["Inter_500Medium"],
+        "body-semibold": ["Inter_600SemiBold"],
+        "body-bold": ["Inter_700Bold"],
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
