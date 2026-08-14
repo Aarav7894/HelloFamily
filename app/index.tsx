@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           resizeMode="contain"
-          className="mt-4 h-[122px] w-[232px]"
+          className="mt-4 h-[174px] w-[320px]"
         />
 
         <View className="mt-4 w-full">
