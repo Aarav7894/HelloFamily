@@ -10,6 +10,7 @@ import {
   type OwnCheckInHistoryEntry,
 } from "@/lib/family-api";
 import { dailyQuestions } from "@/lib/sample-data";
+import { cn } from "@/lib/utils";
 
 function answerLabel(
   questionId: (typeof dailyQuestions)[number]["id"],
@@ -21,13 +22,33 @@ function answerLabel(
   );
 }
 
+function isConcern(entry: OwnCheckInHistoryEntry): boolean {
+  return (
+    entry.responses.mood === "not_good" ||
+    entry.responses.physicallyOkay === "no" ||
+    entry.responses.completedActivities === "no"
+  );
+}
+
 function HistoryRow({ entry }: { entry: OwnCheckInHistoryEntry }) {
+  const concern = isConcern(entry);
+
   return (
     <Card>
-      <CardContent className="gap-2 pt-6">
-        <Text className="text-lg font-semibold">
-          {formatStatusDateLabel(entry.date)}
-        </Text>
+      <CardContent className="gap-3 pt-6">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-base font-semibold">
+            {formatStatusDateLabel(entry.date)}
+          </Text>
+          <Text
+            className={cn(
+              "font-semibold",
+              concern ? "text-amber-700" : "text-emerald-700",
+            )}
+          >
+            {concern ? "🟠 May need support" : "🟢 Everything's okay"}
+          </Text>
+        </View>
         <View className="flex-row flex-wrap gap-2">
           {dailyQuestions.map((question) => (
             <View
