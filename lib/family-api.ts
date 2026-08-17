@@ -37,6 +37,11 @@ export type OwnCheckInHistoryEntry = {
   responses: CheckInResponses;
 };
 
+export type NotificationPreferences = {
+  dailyReminderEnabled: boolean;
+  dailyReminderTime: string;
+};
+
 async function currentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? null;
@@ -262,4 +267,21 @@ export async function fetchTodayCheckInStatus(): Promise<FamilyStatus | null> {
 
   if (error || !data) return null;
   return data.status as FamilyStatus;
+}
+
+export async function fetchNotificationPreferences(): Promise<NotificationPreferences | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("notification_preferences")
+    .select("daily_reminder_enabled, daily_reminder_time")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return {
+    dailyReminderEnabled: data.daily_reminder_enabled,
+    dailyReminderTime: data.daily_reminder_time,
+  };
 }

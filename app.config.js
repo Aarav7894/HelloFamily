@@ -27,6 +27,7 @@ module.exports = {
       ["expo-dev-client", { launchMode: "most-recent" }],
       "expo-router",
       "expo-system-ui",
+      "expo-notifications",
     ],
     experiments: { typedRoutes: true },
   },
