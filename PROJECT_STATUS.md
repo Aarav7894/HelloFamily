@@ -96,7 +96,7 @@ Everything above is committed — see the commit this handoff was written in for
 - **Email confirmation is disabled** in the Supabase dashboard (Authentication → Sign In / Providers → Email → "Confirm email" toggled off), at the project owner's explicit request, so sign-up works with placeholder/fake addresses during testing. The app code already handles both outcomes (`signUp()` returning a session immediately vs. showing `/confirm-email`), so re-enabling needs no code change — just flip the dashboard toggle.
 - **Client-side email validation is deliberately loose**: `EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/` in `app/sign-up.tsx` and `app/invite/[token].tsx` (just requires an `@`). `app/login.tsx` still has the stricter original pattern. Marked with a `// Loosened for pre-launch testing` comment in the code.
 - Test accounts named "Dad"/"Mom" (older_adult, connected to an adult_child test account) exist in the linked Supabase project from earlier manual testing, including a manually-backfilled `phone_number` on at least one of them. These are throwaway dev-project rows, not anything to preserve or treat as real data.
-- **No GitHub remote is configured** — `git remote -v` is empty, `main` has no upstream. All work is local commits only on this machine.
+- **GitHub remote now configured** (2026-08-18): private repo at `git@github.com:Aarav7894/HelloFamily.git`, `origin/main` pushed and tracked. Auth is via a new ed25519 SSH key (`~/.ssh/id_ed25519`) added to the user's GitHub account — `gh` CLI is not installed on this machine.
 
 ## Important warnings / things that must not be changed without discussion
 
