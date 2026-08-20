@@ -26,9 +26,12 @@ module.exports = {
     plugins: [
       ["expo-dev-client", { launchMode: "most-recent" }],
       "expo-router",
+      "expo-splash-screen",
       "expo-system-ui",
       "expo-notifications",
     ],
     experiments: { typedRoutes: true },
+    owner: "lumos-fellows",
+    extra: { eas: { projectId: "2768ca4d-591b-404b-9934-0d8c537fff5f" } },
   },
 };

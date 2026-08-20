@@ -4,8 +4,8 @@
 > knowledge (product scope, architecture, schema, conventions) lives in
 > [CLAUDE.md](CLAUDE.md) instead — don't duplicate it here.
 
-**Last updated**: 2026-08-16, end of session that added the older adult's
-local daily check-in reminder notification.
+**Last updated**: 2026-08-20, after verifying the Expo notifications native
+module fix on the iOS Simulator.
 
 ## Completed so far
 
@@ -34,7 +34,7 @@ local daily check-in reminder notification.
 - **Required and completed a real native rebuild** (`expo prebuild` implicitly, then `npx expo run:ios --device "68DFA0F6-FFFD-4074-A95A-CE7CB46F645B"`) — a JS-only reload is not enough for a new native module.
 - **Verified working** via a native device log stream (not just "no crash"): `xcrun simctl spawn <udid> log stream ... 'subsystem contains "UserNotifications"'` showed `Adding notification request ...` → `Added notification request: [ hasError: 0 ]`.
 
-### The bug that ate most of this session (read before touching `lib/notifications.ts`)
+### Resolved: `ExpoPushTokenManager` native-module error
 
 Importing the `expo-notifications` package root (`import * as Notifications from "expo-notifications"`) crashes at import time with:
 
@@ -42,26 +42,23 @@ Importing the `expo-notifications` package root (`import * as Notifications from
 Error: Cannot find native module 'ExpoPushTokenManager'
 ```
 
-This is **not** a build/link problem — verified exhaustively:
-- The Swift source compiles (symbols present in `libExpoNotifications.a`).
-- It's linked into the running binary (148 symbol matches in `hellofamily.debug.dylib`, the app's real code — the `hellofamily` executable itself is just a 58KB stub; Expo's newer build pipeline puts the actual app in a `.dylib`).
-- Native console logs show it being registered **and** its JS object created successfully at app launch (`🟢 Registering module 'ExpoPushTokenManager'` → `🟢 Creating JS object for module 'ExpoPushTokenManager'`).
-- Only one copy of `expo-modules-core` resolves in the dependency tree (no pnpm duplicate-instance issue).
-- The `aps-environment` entitlement is present.
+The error occurred with the older Expo SDK 57.0.11 native dependency set. The
+SDK patch upgrade in PR #1 moved `expo-notifications` to 57.0.13. After
+regenerating the native dependency graph, the standard package-root import
+loaded successfully in an iOS 26 Simulator dev build. `lib/notifications.ts`
+now uses the public `expo-notifications` API instead of unsupported deep
+imports into the package's build output.
 
-Despite all of that, `requireNativeModule('ExpoPushTokenManager')` (called eagerly by `expo-notifications`'s own root `index.js`, specifically to support `getDevicePushTokenAsync`/`getExpoPushTokenAsync`, which this app doesn't use) throws. **Root cause was never found.**
-
-**The fix**: `lib/notifications.ts` deep-imports only the specific submodules it needs (e.g. `expo-notifications/build/scheduleNotificationAsync`, `expo-notifications/build/NotificationPermissions`, `expo-notifications/build/NotificationsHandler`, `expo-notifications/build/Notifications.types`, `expo-notifications/build/NotificationChannelManager.types`, `expo-notifications/build/setNotificationChannelAsync`, `expo-notifications/build/cancelScheduledNotificationAsync`), bypassing the package's root `index.js` entirely so `PushTokenManager` is never touched. None of these files transitively reference push-token code (verified by grepping their imports).
-
-**Do not "clean this up"** back to `import * as Notifications from "expo-notifications"` — it will reintroduce the crash for every screen that imports `lib/notifications.ts`, not just push-token-specific code paths.
+The generated `ios/` and `android/` folders are ignored. Run `pnpm prebuild`
+after checking out the dependency upgrade so the native projects match the
+JavaScript packages before running the app.
 
 **A Metro cache gotcha found along the way**: after editing `lib/notifications.ts`, the exact same stale error (referencing the *old*, already-deleted import line) kept reappearing on fresh app launches. This was a stale Metro transform cache, not a real repro — killing the Metro process (port 8081) and restarting with `pnpm start --clear` fixed it. **If you're debugging something in this file and the error message doesn't match the current file content, clear the Metro cache before concluding anything.**
 
 ## Unresolved bugs / issues
 
-1. **Root cause of the `ExpoPushTokenManager` resolution failure is unknown** (see above). It's worked around, not fixed. If remote push (Expo push tokens, `push_tokens` table) is built later, this exact issue will resurface for `getExpoPushTokenAsync`/`getDevicePushTokenAsync` specifically, and will need actual root-causing at that point (can't route around it the same way, since that's the very feature needed).
-2. **`docs/database-schema.md` is stale** — generated 2026-08-12, predates `profiles.phone_number` and the `notification_preferences` table going live. CLAUDE.md's "Database" section is current; this doc file itself has not been regenerated.
-3. **No automated tests exist** in this repo (no test runner configured) — all verification this session was manual (TypeScript, Biome, and hands-on Simulator testing).
+1. **`docs/database-schema.md` is stale** — generated 2026-08-12, predates `profiles.phone_number` and the `notification_preferences` table going live. CLAUDE.md's "Database" section is current; this doc file itself has not been regenerated.
+2. **No automated tests exist** in this repo (no test runner configured) — all verification this session was manual (TypeScript, Biome, and hands-on Simulator testing).
 
 ## Unfinished work
 
@@ -100,7 +97,7 @@ Everything above is committed — see the commit this handoff was written in for
 
 ## Important warnings / things that must not be changed without discussion
 
-- **Do not revert `lib/notifications.ts`'s deep-import pattern** back to a root `expo-notifications` import (see "The bug that ate most of this session" above) — this will reintroduce a hard crash on every screen that imports it.
+- **Keep the Expo SDK package patch versions aligned** and regenerate the native projects after changing them.
 - **Do not modify the database schema, RLS policies, triggers, or functions** without explaining the change and getting explicit approval first — this is the project owner's own standing rule (see CLAUDE.md).
 - **Do not let the service-role key or DB password enter the mobile app or its repo.**
 - **Do not weaken the `check_ins`/`daily_statuses` privacy split** (adult_child must never read raw check-in answers).
@@ -110,6 +107,6 @@ Everything above is committed — see the commit this handoff was written in for
 
 ## Exact next steps (priority order)
 
-1. Decide with the user whether to tackle remote push notifications now (the largest remaining MVP piece) or ship the local-only reminder as-is for a first round of testing.
-2. If proceeding with remote push: design the Edge Function + Database Webhook + push-token-registration flow, get the user's explicit sign-off on the schema addition (writing to `push_tokens`), then implement — budget real-device testing time, since none of it can be verified in the Simulator.
+1. Design the remote-push Edge Function + Database Webhook + push-token-registration flow, get the user's explicit sign-off on any schema change, then implement it.
+2. Verify Expo token registration and notification delivery on a physical iPhone using the Lumos Fellows Apple Developer team; the Simulator only verifies that the native module loads.
 3. Otherwise, work down the "Unfinished work" list above in order (re-enable email confirmation prep, tighten email validation, invite management UI, universal links, finish `docs/supabase-project-settings.md`).

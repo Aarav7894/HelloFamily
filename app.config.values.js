@@ -1,7 +1,7 @@
 module.exports = {
-  name: "hello-family",
+  name: "HelloFamily",
   slug: "hello-family",
   scheme: "hello-family",
-  bundleIdentifier: "com.anonymous.hellofamily",
-  package: "com.anonymous.hellofamily",
+  bundleIdentifier: "com.lumosfellows.hellofamily",
+  package: "com.lumosfellows.hellofamily",
 };
