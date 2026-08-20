@@ -1,19 +1,13 @@
-// Deep-imports specific expo-notifications submodules instead of the
-// package's root index, because importing the root eagerly resolves
-// PushTokenManager (used for remote push registration, which this app
-// doesn't use) and that native module fails to resolve in this dev-client
-// build. None of the local-scheduling pieces below depend on it.
-
-import { cancelScheduledNotificationAsync } from "expo-notifications/build/cancelScheduledNotificationAsync";
-import { AndroidImportance } from "expo-notifications/build/NotificationChannelManager.types";
 import {
+  AndroidImportance,
+  cancelScheduledNotificationAsync,
   getPermissionsAsync,
   requestPermissionsAsync,
-} from "expo-notifications/build/NotificationPermissions";
-import { SchedulableTriggerInputTypes } from "expo-notifications/build/Notifications.types";
-import { setNotificationHandler } from "expo-notifications/build/NotificationsHandler";
-import { scheduleNotificationAsync } from "expo-notifications/build/scheduleNotificationAsync";
-import { setNotificationChannelAsync } from "expo-notifications/build/setNotificationChannelAsync";
+  SchedulableTriggerInputTypes,
+  scheduleNotificationAsync,
+  setNotificationChannelAsync,
+  setNotificationHandler,
+} from "expo-notifications";
 import { Platform } from "react-native";
 
 const DAILY_REMINDER_NOTIFICATION_ID = "daily-check-in-reminder";
